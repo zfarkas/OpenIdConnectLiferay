@@ -51,7 +51,13 @@ import javax.servlet.http.HttpServletResponse;
 public class OpenIdConnectAutoLogin implements AutoLogin{
 
 	private static final Log _log = LogFactoryUtil.getLog(OpenIdConnectAutoLogin.class);
-	        
+	
+	@Override
+	public String[] handleException(javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response, Exception e)
+			throws AutoLoginException {
+		return null;
+	}
+
 	@Override
 	public String[] login(HttpServletRequest request, HttpServletResponse response)
 			throws AutoLoginException {
@@ -85,7 +91,7 @@ public class OpenIdConnectAutoLogin implements AutoLogin{
 */                
                 if(request.getParameter("error")!=null){
                     try {
-                        response.sendRedirect("/not_authorised");
+                        response.sendRedirect("/web/guest/not-authorized");
                         return null;
                     } catch (IOException ex) {
                         _log.error(ex);
@@ -101,8 +107,18 @@ public class OpenIdConnectAutoLogin implements AutoLogin{
                     UserInfo userInfo = null;
                     try {
                         userInfo = authZ.getUserInfo(request);
-                        
-                        _log.debug("User Information: givenName='"+userInfo.getGivenName()+"' familyName='"+userInfo.getFamilyName()+"' globalName='"+userInfo.getName()+"'");
+                        _log.debug("User Information: givenName='"+userInfo.getGivenName()+"' familyName='"+userInfo.getFamilyName()+
+                                "' globalName='"+userInfo.getName()+"' hasActiveSla='"+userInfo.getClaim("hasActiveSla", String.class)+
+                                "' confirmedRegistration='" +userInfo.getClaim("confirmedRegistration", String.class)+"'");
+                        if(!userInfo.getClaim("hasActiveSla", String.class).equalsIgnoreCase("true") ||
+                                !userInfo.getClaim("confirmedRegistration", String.class).equalsIgnoreCase("true")) {
+                            try {
+                                response.sendRedirect("/web/guest/not-authorized");
+                                return null;
+                            } catch (IOException ex) {
+                                _log.error(ex);
+                            }
+                        }
                     } catch (AuthException ex) {
                         _log.error(ex);
                         return null;

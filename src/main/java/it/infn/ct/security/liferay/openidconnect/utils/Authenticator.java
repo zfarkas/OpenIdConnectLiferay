@@ -25,9 +25,8 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.security.auth.AuthException;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.ParseException;
@@ -50,14 +49,15 @@ import com.nimbusds.openid.connect.sdk.AuthenticationResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationResponseParser;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCAccessTokenResponse;
+import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponseParser;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.UserInfoSuccessResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-import com.nimbusds.openid.connect.sdk.util.DefaultJWTDecoder;
+import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.JWT;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -68,9 +68,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Date;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -140,17 +141,16 @@ public class Authenticator {
     }
     
     public Authenticator(State state) {
-        authC = new ClientSecretBasic(new ClientID("xxxxxxxxxxxxxx"), new Secret("xxxxxxxx"));
+        authC = new ClientSecretBasic(new ClientID("unity-oauth-zoltan"), new Secret("sPesex2j"));
         this.state = state;
         try {
-            callback = new URI("https://csgf.egi.eu/c/portal/login");
-//            callback = new URI("http://burns.ct.infn.it/c/portal/login");
+            callback = new URI("https://ltos-gateway.lpds.sztaki.hu/c/portal/login");
             oauthS = new URI("https://unity.egi.eu/oauth2-as/oauth2-authz");
             tokenS = new URI("https://unity.egi.eu/oauth2/token");
             userS = new URI("https://unity.egi.eu/oauth2/userinfo");
             tokenCertSign = new URI("https://unity.egi.eu/oauth2/jwk");
             issuer = "https://unity.egi.eu/oauth2";
-            aud = "unity-oauth-sg"; 
+            aud = "unity-oauth-zoltan"; 
         } catch (URISyntaxException ex) {
             _log.error(ex);
         }
@@ -225,11 +225,11 @@ public class Authenticator {
             _log.error(ex);
         }
         
-        if(tokenResp == null || tokenResp instanceof TokenErrorResponse){
+        if (tokenResp == null || tokenResp instanceof TokenErrorResponse) {
             throw new AuthException("OpenId Connect server does not authenticate");
         }
         
-        RSAPublicKey providerKey= null;
+        RSAPublicKey providerKey = null;
         
         JSONObject key;
         try {
@@ -241,45 +241,42 @@ public class Authenticator {
             _log.error(ex);
         } catch (java.text.ParseException ex) {
             _log.error(ex);
-        } catch (NoSuchAlgorithmException ex) {
-            _log.error(ex);
-        } catch (InvalidKeySpecException ex) {
-            _log.error(ex);
+        } catch (JOSEException ex) {
+            Logger.getLogger(Authenticator.class.getName()).log(Level.SEVERE, null, ex);
         }
         
-        OIDCAccessTokenResponse accessTokenResponse = (OIDCAccessTokenResponse) tokenResp;
-        
-        DefaultJWTDecoder jwtDec = new DefaultJWTDecoder();
-        jwtDec.addJWSVerifier(new RSASSAVerifier(providerKey));
-        ReadOnlyJWTClaimsSet claims=null;
+        OIDCTokenResponse accessTokenResponse = (OIDCTokenResponse)tokenResp;
+        JWTClaimsSet claims = null;
         try {
-            claims = jwtDec.decodeJWT(accessTokenResponse.getIDToken());
-            _log.debug("Claims in ID Token: " + claims.toJSONObject().toJSONString());
-        } catch (JOSEException ex) {
-            _log.error(ex);
+            _log.debug("About to parse: " + accessTokenResponse.getOIDCTokens().getIDTokenString());
+            JWT jwt = SignedJWT.parse(accessTokenResponse.getOIDCTokens().getIDTokenString());
+            _log.debug("Parsed ID token: " + jwt.getParsedString());
+            claims = jwt.getJWTClaimsSet();
+            _log.debug("Claims are: " + claims.toString());
         } catch (java.text.ParseException ex) {
             _log.error(ex);
+            Logger.getLogger(Authenticator.class.getName()).log(Level.SEVERE, null, ex);
         }
         
-        if(claims==null){
+        if (claims == null) {
             throw new AuthException("Not able to decode the ID Token");
         }
         
-        if(claims.getExpirationTime().before(new Date())){
+        if (claims.getExpirationTime().before(new Date())) {
             throw new AuthException("ID Token Expired");
         }
         
-        if(! claims.getIssuer().equals(issuer)){
+        if (!claims.getIssuer().equals(issuer)) {
             throw new AuthException("ID Token issuer "+claims.getIssuer()+" does not match");
         }
         
-        if(! claims.getAudience().contains(aud)){
+        if (!claims.getAudience().contains(aud)) {
             throw new AuthException("ID Token audience "+claims.getAudience()+" does not match");            
         }
-        
+
         UserInfoRequest userInfoReq = new UserInfoRequest(
                 userS,
-                accessTokenResponse.getBearerAccessToken());
+                accessTokenResponse.getTokens().getBearerAccessToken());
         
         
         HTTPResponse userInfoHTTPResp = null;
@@ -337,7 +334,6 @@ public class Authenticator {
         } catch (ParseException ex) {
             _log.error(ex);
         }
-        
         return null;
     }
 
