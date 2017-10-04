@@ -172,7 +172,7 @@ public class OpenIdConnectAutoLogin implements AutoLogin{
                             user = UserLocalServiceUtil.addUser(
                                     0, companyId,
                                     true, null, null,
-                                    false, userInfo.getStringClaim("sub").replace('@', '_'),
+                                    false, userInfo.getStringClaim("sub").replace('@', '-'),
                                     mail,
                                     0, userInfo.getStringClaim("sub"),
                                     Locale.ENGLISH,
