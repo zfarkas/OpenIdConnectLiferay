@@ -144,13 +144,13 @@ public class Authenticator {
         authC = new ClientSecretBasic(new ClientID("d6f0709b-65c2-42c1-ad3a-324b613c2f8f"), new Secret("*************************************************"));
         this.state = state;
         try {
-            callback = new URI("https://csgf.egi.eu/c/portal/login");
-            oauthS = new URI("https://aai-dev.egi.eu/oidc/authorize");
-            tokenS = new URI("https://aai-dev.egi.eu/oidc/token");
-            userS = new URI("https://aai-dev.egi.eu/oidc/userinfo");
-            tokenCertSign = new URI("https://aai-dev.egi.eu/oidc/jwk");
-            issuer = "https://aai-dev.egi.eu/oidc/";
-            aud = "csgf"; 
+            callback = new URI("https://ltos-gateway.lpds.sztaki.hu/c/portal/login");
+            oauthS = new URI("https://aai.egi.eu/oidc/authorize");
+            tokenS = new URI("https://aai.egi.eu/oidc/token");
+            userS = new URI("https://aai.egi.eu/oidc/userinfo");
+            tokenCertSign = new URI("https://aai.egi.eu/oidc/jwk");
+            issuer = "https://aai.egi.eu/oidc/";
+            aud = "d6f0709b-65c2-42c1-ad3a-324b613c2f8f";
         } catch (URISyntaxException ex) {
             _log.error(ex);
         }
