@@ -141,16 +141,16 @@ public class Authenticator {
     }
     
     public Authenticator(State state) {
-        authC = new ClientSecretBasic(new ClientID("d6f0709b-65c2-42c1-ad3a-324b613c2f8f"), new Secret("*************************************************"));
+        authC = new ClientSecretBasic(new ClientID("42c3b959-c983-4d1e-9954-cc8e0b87c2ac"), new Secret("*************************************************"));
         this.state = state;
         try {
-            callback = new URI("https://ltos-gateway.lpds.sztaki.hu/c/portal/login");
+            callback = new URI("https://dariah-sg.irb.hr/c/portal/login");
             oauthS = new URI("https://aai.egi.eu/oidc/authorize");
             tokenS = new URI("https://aai.egi.eu/oidc/token");
             userS = new URI("https://aai.egi.eu/oidc/userinfo");
             tokenCertSign = new URI("https://aai.egi.eu/oidc/jwk");
             issuer = "https://aai.egi.eu/oidc/";
-            aud = "d6f0709b-65c2-42c1-ad3a-324b613c2f8f";
+            aud = "42c3b959-c983-4d1e-9954-cc8e0b87c2ac";
         } catch (URISyntaxException ex) {
             _log.error(ex);
         }

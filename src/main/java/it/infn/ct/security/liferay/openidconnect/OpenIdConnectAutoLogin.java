@@ -99,15 +99,6 @@ public class OpenIdConnectAutoLogin implements AutoLogin{
                     UserInfo userInfo = null;
                     try {
                         userInfo = authZ.getUserInfo(request);
-                        if(!(userInfo.getStringListClaim("edu_person_entitlements").contains("urn:mace:egi.eu:aai.egi.eu:member@vo.access.egi.eu") &&
-                                userInfo.getStringListClaim("edu_person_entitlements").contains("urn:mace:egi.eu:aai.egi.eu:vm_operator@vo.access.egi.eu"))) {
-                            try {
-                                response.sendRedirect("/web/guest/not-authorized");
-                                return null;
-                            } catch (IOException ex) {
-                                _log.error(ex);
-                            }
-                        }
                     } catch (AuthException ex) {
                         _log.error(ex);
                         return null;
@@ -172,7 +163,7 @@ public class OpenIdConnectAutoLogin implements AutoLogin{
                             user = UserLocalServiceUtil.addUser(
                                     0, companyId,
                                     true, null, null,
-                                    false, userInfo.getStringClaim("sub").replace('@', '-'),
+                                    false, userInfo.getStringClaim("sub").substring(0, userInfo.getStringClaim("sub").indexOf('@')),
                                     mail,
                                     0, userInfo.getStringClaim("sub"),
                                     Locale.ENGLISH,
